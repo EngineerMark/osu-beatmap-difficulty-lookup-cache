@@ -210,6 +210,21 @@ namespace BeatmapDifficultyLookupCache
 
         private async Task<WorkingBeatmap> getBeatmap(int beatmapId)
         {
+            //get executable path
+            string executablePath = Assembly.GetExecutingAssembly().Location;
+            string path = Path.Combine(Path.GetDirectoryName(executablePath) ?? string.Empty, "beatmaps", $"{beatmapId}.osu");
+            // Check if the file is stored locally already (relative to executable)
+            if (File.Exists(path))
+            {
+                logger.LogInformation("Loading beatmap from local cache ({BeatmapId})", beatmapId);
+                // Read file as a StreamReader
+                using (var fileStream
+                    = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    return new LoaderWorkingBeatmap(fileStream);
+                }
+            }
+
             logger.LogInformation("Downloading beatmap ({BeatmapId})", beatmapId);
 
             var req = new WebRequest(string.Format(Environment.GetEnvironmentVariable("DOWNLOAD_PATH") ?? "https://osu.ppy.sh/osu/{0}", beatmapId))
@@ -221,6 +236,15 @@ namespace BeatmapDifficultyLookupCache
 
             if (req.ResponseStream.Length == 0)
                 throw new Exception($"Retrieved zero-length beatmap ({beatmapId})!");
+
+            // Save the file locally
+            if(!Directory.Exists(Path.GetDirectoryName(path)))
+                Directory.CreateDirectory(Path.GetDirectoryName(path) ?? string.Empty);
+            using (var fileStream = File.Create(path))
+            {
+                req.ResponseStream.Seek(0, SeekOrigin.Begin);
+                req.ResponseStream.CopyTo(fileStream);
+            }
 
             return new LoaderWorkingBeatmap(req.ResponseStream);
         }
