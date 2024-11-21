@@ -240,11 +240,10 @@ namespace BeatmapDifficultyLookupCache
             // Save the file locally
             if(!Directory.Exists(Path.GetDirectoryName(path)))
                 Directory.CreateDirectory(Path.GetDirectoryName(path) ?? string.Empty);
-            using (var fileStream = File.Create(path))
-            {
-                req.ResponseStream.Seek(0, SeekOrigin.Begin);
-                req.ResponseStream.CopyTo(fileStream);
-            }
+            
+            await File.WriteAllLinesAsync(path, new StreamReader(req.ResponseStream).ReadToEnd().Split('\n'));
+
+            req.ResponseStream.Seek(0, SeekOrigin.Begin);
 
             return new LoaderWorkingBeatmap(req.ResponseStream);
         }
