@@ -178,7 +178,7 @@ namespace BeatmapDifficultyLookupCache
                             var attributes = difficultyCalculator.Calculate(mods);
 
                             // Trim a few members which we don't consume and only take up RAM.
-                            attributes.Mods = Array.Empty<Mod>();
+                            // attributes.Mods = Array.Empty<Mod>();
 
                             return attributes;
                         }
