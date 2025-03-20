@@ -237,15 +237,19 @@ namespace BeatmapDifficultyLookupCache
             if (req.ResponseStream.Length == 0)
                 throw new Exception($"Retrieved zero-length beatmap ({beatmapId})!");
 
-            // Save the file locally
-            if(!Directory.Exists(Path.GetDirectoryName(path)))
-                Directory.CreateDirectory(Path.GetDirectoryName(path) ?? string.Empty);
+            LoaderWorkingBeatmap workingBeatmap = new LoaderWorkingBeatmap(req.ResponseStream);
+
+            if(workingBeatmap.BeatmapInfo.Status == BeatmapOnlineStatus.Ranked || workingBeatmap.BeatmapInfo.Status == BeatmapOnlineStatus.Approved || workingBeatmap.BeatmapInfo.Status == BeatmapOnlineStatus.Loved)
+            {
+                req.ResponseStream.Seek(0, SeekOrigin.Begin);
+                // Save the file locally
+                if (!Directory.Exists(Path.GetDirectoryName(path)))
+                    Directory.CreateDirectory(Path.GetDirectoryName(path) ?? string.Empty);
             
-            await File.WriteAllLinesAsync(path, new StreamReader(req.ResponseStream).ReadToEnd().Split('\n'));
+                await File.WriteAllLinesAsync(path, new StreamReader(req.ResponseStream).ReadToEnd().Split('\n'));
+            }
 
-            req.ResponseStream.Seek(0, SeekOrigin.Begin);
-
-            return new LoaderWorkingBeatmap(req.ResponseStream);
+            return workingBeatmap;
         }
 
         private static List<Ruleset> getRulesets()
