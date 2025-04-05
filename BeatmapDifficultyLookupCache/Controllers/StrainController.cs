@@ -1,7 +1,5 @@
 ﻿using BeatmapDifficultyLookupCache.Models;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using osu.Game.Rulesets.Difficulty.Skills;
 using System.Threading.Tasks;
 
 namespace BeatmapDifficultyLookupCache.Controllers
