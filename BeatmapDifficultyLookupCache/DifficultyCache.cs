@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using BeatmapDifficultyLookupCache.Models;
 using Dapper;
 using Microsoft.Extensions.Logging;
+using osu.Framework.Extensions.IEnumerableExtensions;
 using osu.Framework.IO.Network;
 using osu.Game.Beatmaps;
 using osu.Game.Beatmaps.Legacy;
@@ -19,6 +20,8 @@ using osu.Game.Online.API.Requests.Responses;
 using osu.Game.Rulesets;
 using osu.Game.Rulesets.Catch.Difficulty;
 using osu.Game.Rulesets.Difficulty;
+using osu.Game.Rulesets.Difficulty.Preprocessing;
+using osu.Game.Rulesets.Difficulty.Skills;
 using osu.Game.Rulesets.Mania.Difficulty;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets.Osu.Difficulty;
@@ -33,6 +36,7 @@ namespace BeatmapDifficultyLookupCache
         private static readonly DifficultyAttributes empty_attributes = new DifficultyAttributes(Array.Empty<Mod>(), -1);
 
         private readonly Dictionary<DifficultyRequest, Task<DifficultyAttributes>> attributesCache = new Dictionary<DifficultyRequest, Task<DifficultyAttributes>>();
+        private readonly Dictionary<DifficultyRequest, Task<BeatmapStrains>> strainsCache = new Dictionary<DifficultyRequest, Task<BeatmapStrains>>();
         private readonly ILogger logger;
 
         private readonly bool useDatabase;
@@ -194,6 +198,57 @@ namespace BeatmapDifficultyLookupCache
             return await task;
         }
 
+        public async Task<BeatmapStrains> GetStrains(DifficultyRequest request)
+        {
+            Task<BeatmapStrains>? task;
+            lock (strainsCache)
+            {
+                if (!strainsCache.TryGetValue(request, out task))
+                {
+                    strainsCache[request] = task = Task.Run(async () =>
+                    {
+                        var apiMods = request.GetMods();
+                        logger.LogInformation("Computing strains (beatmap: {BeatmapId}, ruleset: {RulesetId}, mods: {Mods})",
+                            request.BeatmapId,
+                            request.RulesetId,
+                            apiMods.Select(m => m.ToString()));
+                        try
+                        {
+                            var ruleset = available_rulesets.First(r => r.RulesetInfo.OnlineID == request.RulesetId);
+                            var mods = apiMods.Select(m => m.ToMod(ruleset)).ToArray();
+                            var beatmap = await getBeatmap(request.BeatmapId);
+                            //var difficultyCalculator = ruleset.CreateDifficultyCalculator(beatmap);
+                            var difficultyCalculator = RulesetHelper.GetExtendedDifficultyCalculator(ruleset.RulesetInfo, beatmap);
+                            difficultyCalculator.Calculate(mods); //forces to calculate clockrate
+                            //var attributes = difficultyCalculator.Calculate(mods);
+                            //var skills = difficultyCalculator.CreateSkills();
+
+                            Skill[] skills = ((IExtendedDifficultyCalculator)difficultyCalculator).GetSkills();
+                            var strainSkills = skills.Where(x => x is StrainSkill or StrainDecaySkill).ToArray();
+
+                            BeatmapStrains strains = new BeatmapStrains(request.BeatmapId, request.Mods);
+
+                            foreach (var skill in strainSkills)
+                            {
+                                double[] _strains = ((StrainSkill)skill).GetCurrentStrainPeaks().ToArray();
+                                //get name of the skill object
+                                string name = skill.GetType().Name;
+
+                                strains.AddStrains(name, _strains);
+                            }
+
+                            return strains;
+                        }
+                        catch (Exception e)
+                        {
+                            logger.LogWarning("Request failed with \"{Message}\"", e.Message);
+                            return new BeatmapStrains(request.BeatmapId, request.Mods);
+                        }
+                    });
+                }
+            }
+            return await task;
+        }
         public void Purge(int beatmapId)
         {
             logger.LogInformation("Purging (beatmap: {BeatmapId})", beatmapId);
