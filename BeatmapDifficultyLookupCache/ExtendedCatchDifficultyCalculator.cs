@@ -6,19 +6,20 @@ using osu.Game.Rulesets.Difficulty.Skills;
 using osu.Game.Rulesets.Difficulty;
 using osu.Game.Rulesets.Mods;
 using System.Linq;
+using System;
 
 namespace BeatmapDifficultyLookupCache
 {
     public class ExtendedCatchDifficultyCalculator : CatchDifficultyCalculator, IExtendedDifficultyCalculator
     {
-        private Skill[] skills;
+        private Skill[]? skills;
 
         public ExtendedCatchDifficultyCalculator(IRulesetInfo ruleset, IWorkingBeatmap beatmap)
             : base(ruleset, beatmap)
         {
         }
 
-        public Skill[] GetSkills() => skills;
+        public Skill[] GetSkills() => skills ?? Array.Empty<Skill>();
         public DifficultyHitObject[] GetDifficultyHitObjects(IBeatmap beatmap, double clockRate) => CreateDifficultyHitObjects(beatmap, clockRate).ToArray();
 
         protected override DifficultyAttributes CreateDifficultyAttributes(IBeatmap beatmap, Mod[] mods, Skill[] skills, double clockRate)

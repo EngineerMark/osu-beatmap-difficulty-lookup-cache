@@ -6,19 +6,20 @@ using osu.Game.Rulesets.Mania.Difficulty;
 using osu.Game.Rulesets.Mods;
 using osu.Game.Rulesets;
 using System.Linq;
+using System;
 
 namespace BeatmapDifficultyLookupCache
 {
     public class ExtendedManiaDifficultyCalculator : ManiaDifficultyCalculator, IExtendedDifficultyCalculator
     {
-        private Skill[] skills;
+        private Skill[]? skills;
 
         public ExtendedManiaDifficultyCalculator(IRulesetInfo ruleset, IWorkingBeatmap beatmap)
             : base(ruleset, beatmap)
         {
         }
 
-        public Skill[] GetSkills() => skills;
+        public Skill[] GetSkills() => skills ?? Array.Empty<Skill>();
         public DifficultyHitObject[] GetDifficultyHitObjects(IBeatmap beatmap, double clockRate) => CreateDifficultyHitObjects(beatmap, clockRate).ToArray();
 
         protected override DifficultyAttributes CreateDifficultyAttributes(IBeatmap beatmap, Mod[] mods, Skill[] skills, double clockRate)

@@ -12,10 +12,10 @@ namespace BeatmapDifficultyLookupCache.Models
     public class BeatmapStrains
     {
         public int beatmap_id { get; set; }
-        public JArray mods { get; set; }
+        public JArray? mods { get; set; }
         public Dictionary<string, double[]> strains { get; set; } = new Dictionary<string, double[]>();
 
-        public BeatmapStrains(int beatmap_id, JArray mods)
+        public BeatmapStrains(int beatmap_id, JArray? mods)
         {
             this.beatmap_id = beatmap_id;
             this.mods = mods;
